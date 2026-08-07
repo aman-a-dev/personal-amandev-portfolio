@@ -12,6 +12,26 @@ export type ProjectsType = {
 
 export const projectsList: ProjectsType[] = [
   {
+    badge: "Hot",
+    img: "bf",
+    title: "BetFinder",
+    subTitle: "Full-Stack Rental House Platform",
+    description:
+      "A modern full-stack rental house platform that helps users discover and list properties with ease. Built with Next.js, TypeScript, Tailwind CSS, Prisma, and Supabase, it features secure authentication, property management, advanced search and filtering, favorites, and a responsive user experience.",
+    github: "https://github.com/aman-a-dev/betfinder",
+    demo: "https://betfinder-et.vercel.app/",
+    teckStack: [
+      "Next.js",
+      "TypeScript",
+      "Tailwind CSS",
+      "Supabase",
+      "PostgreSQL",
+      "shadcn/ui",
+      "Framer Motion",
+    ],
+    isPrivate: false,
+  },
+  {
     badge: "Updated",
     img: "ec",
     title: "ET Care Products",

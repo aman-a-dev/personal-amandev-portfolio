@@ -6,6 +6,7 @@ import {
   IconBrandGithub,
   IconBrandTelegram,
   IconBrandWhatsapp,
+  IconBrandTiktok,
 } from "@tabler/icons-react";
 import { motion } from "motion/react";
 import { DiaTextReveal } from "@/components/vendor/dia-text-reveal";
@@ -22,6 +23,12 @@ const CONTACTS = [
     handle: "+251 902 99 1919",
     href: "https://wa.link/r73qou",
     icon: IconBrandWhatsapp,
+  },
+  {
+    label: "Tiktok",
+    handle: "@amana.dev",
+    href: "https://tiktok.com/@amana.dev",
+    icon: IconBrandTiktok,
   },
   {
     label: "GitHub",

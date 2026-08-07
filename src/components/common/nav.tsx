@@ -33,7 +33,7 @@ const menuItems: MenuItemsType[] = [
   },
   {
     title: "Projects",
-    href: "/#projects",
+    href: "/projects",
     icon: <Book />,
   },
 ];
@@ -47,8 +47,12 @@ const socialLinks: { title: string; href: string }[] = [
     href: "https://github.com/aman-a-dev",
   },
   {
+    title: "Tiktok",
+    href: "https://www.tiktok.com/@amana.dev",
+  },
+  {
     title: "Email",
-    href: "mailto:amanuelantenha@gmail.com'",
+    href: "mailto:amanuelantenha@gmail.com",
   },
 ];
 const menuListvariants = {

@@ -33,7 +33,6 @@ export function ProjectCard({
     setMounted(true);
   }, []);
 
-  // Always use the same src on the server and during the first client render
   let src = "d.png";
   if (mounted) {
     switch (resolvedTheme) {
@@ -64,7 +63,7 @@ export function ProjectCard({
           alt={title}
           fill
           sizes="(min-width: 1024px) 420px, 100vw"
-          className="object-cover opacity-100 mix-blend-normal transition duration-500 lg:opacity-90 lg:mix-blend-luminosity lg:group-hover:opacity-100 lg:group-hover:mix-blend-normal"
+          className="object-cover opacity-100 mix-blend-normal transition duration-500 ease-out lg:opacity-90 lg:mix-blend-luminosity lg:group-hover:opacity-100 lg:group-hover:mix-blend-normal"
         />
       </div>
 

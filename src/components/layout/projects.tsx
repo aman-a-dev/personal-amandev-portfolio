@@ -3,6 +3,8 @@
 import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { ArrowRight } from "lucide-react";
+import Link from "next/link";
 import { ProjectCard } from "@/components/custom/project-card";
 import { projectsList } from "@/data/projects";
 import { Heading } from "@/components/common/intro";
@@ -18,12 +20,6 @@ export default function Projects() {
     if (!wrap || !track) return;
 
     const ctx = gsap.context(() => {
-      // Pin the section and translate the track horizontally as the user
-      // scrolls down — vertical scroll drives horizontal motion, on every
-      // screen size. Cards are full-bleed (100vw) on mobile and a fixed
-      // width on desktop; either way `track.scrollWidth` already accounts
-      // for the track's own left/right padding, so we don't need a manual
-      // buffer constant.
       const getScrollAmount = () => track.scrollWidth - window.innerWidth;
 
       const tween = gsap.to(track, {
@@ -33,16 +29,14 @@ export default function Projects() {
           trigger: wrap,
           start: "top top",
           end: () => "+=" + getScrollAmount(),
-          scrub: 1,
+          scrub: 0.5, // ← smoother scrub response
           pin: true,
           anticipatePin: 1,
           invalidateOnRefresh: true,
         },
       });
 
-      // Each card dims/desaturates until it nears the center of the
-      // viewport, then comes fully into focus — tied to the same
-      // horizontal timeline via containerAnimation.
+      // Card focus animations
       gsap.utils.toArray<HTMLElement>(".proj-card").forEach((card) => {
         gsap.fromTo(
           card,
@@ -62,10 +56,34 @@ export default function Projects() {
           },
         );
       });
+
+      // More Projects button — rises & scales into view
+      const moreBtn = track.querySelector(".more-projects-btn");
+      if (moreBtn) {
+        gsap.fromTo(
+          moreBtn,
+          { opacity: 0, scale: 0.6, y: 30 },
+          {
+            opacity: 1,
+            scale: 1,
+            y: 0,
+            ease: "none",
+            scrollTrigger: {
+              trigger: moreBtn,
+              containerAnimation: tween,
+              start: "left 85%",
+              end: "left 55%",
+              scrub: true,
+            },
+          },
+        );
+      }
     }, wrap);
 
     return () => ctx.revert();
   }, []);
+
+  const chosenProjects = projectsList.slice(0, 4);
 
   return (
     <section id="projects" className="relative mb-5">
@@ -88,9 +106,33 @@ export default function Projects() {
           ref={trackRef}
           className="flex gap-2 px-1 m-3 lg:gap-7 lg:px-[6vw]"
         >
-          {projectsList.map((project, i) => (
+          {chosenProjects.map((project, i) => (
             <ProjectCard key={project.title} index={i} {...project} />
           ))}
+
+          {/* ── Circular More Projects CTA ── */}
+          <div className="flex flex-none items-center justify-center px-3 lg:px-8">
+            <Link
+              href="/projects"
+              className="more-projects-btn group relative flex h-[170px] w-[170px] flex-col items-center justify-center gap-2.5 rounded-full border border-white/10 bg-background/80 backdrop-blur-sm transition-all duration-500 ease-out hover:scale-110 hover:border-white/30 hover:bg-background sm:h-[200px] sm:w-[200px] lg:h-[280px] lg:w-[280px] lg:gap-4"
+            >
+              {/* subtle expanding ring on hover */}
+              <span className="absolute inset-0 rounded-full border border-white/5 opacity-0 transition-all duration-500 ease-out scale-100 group-hover:scale-125 group-hover:opacity-100" />
+
+              <span className="relative text-center font-display text-xs font-bold uppercase tracking-widest text-foreground sm:text-sm lg:text-base">
+                More
+                <br />
+                Projects
+              </span>
+
+              <div className="relative flex h-9 w-9 items-center justify-center rounded-full border border-white/10 transition-all duration-300 group-hover:border-white/30 group-hover:bg-white/5 sm:h-10 sm:w-10 lg:h-12 lg:w-12">
+                <ArrowRight
+                  size={16}
+                  className="text-foreground transition-transform duration-300 group-hover:translate-x-0.5 sm:size-[18px] lg:size-5"
+                />
+              </div>
+            </Link>
+          </div>
         </div>
       </div>
     </section>
