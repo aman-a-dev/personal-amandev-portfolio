@@ -125,7 +125,7 @@ export default function Projects() {
                 Projects
               </span>
 
-              <div className="relative flex h-9 w-9 items-center justify-center rounded-full border border-white/10 transition-all duration-300 group-hover:border-white/30 group-hover:bg-white/5 sm:h-10 sm:w-10 lg:h-12 lg:w-12">
+              <div className="relative flex h-9 w-9 items-center justify-center rounded-full border border-foreground transition-all duration-300 group-hover:border-muted/30 group-hover:bg-card/5 sm:h-10 sm:w-10 lg:h-12 lg:w-12">
                 <ArrowRight
                   size={16}
                   className="text-foreground transition-transform duration-300 group-hover:translate-x-0.5 sm:size-[18px] lg:size-5"

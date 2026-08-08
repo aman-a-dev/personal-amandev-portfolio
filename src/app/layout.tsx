@@ -29,7 +29,7 @@ export default function RootLayout({
           {children}
           <Footer />
           <Toaster richColors closeButton position="bottom-left" />
-          <CodingFactsToast />
+          {/*<CodingFactsToast />*/}
         </ThemeProvider>
       </body>
     </html>

@@ -1,866 +1,731 @@
-// "use client";
-
-// import { useEffect, useRef, useState, type RefObject } from "react";
-// import * as THREE from "three";
-// import { Canvas, useThree } from "@react-three/fiber";
-// import { useGLTF } from "@react-three/drei";
-// import { gsap } from "gsap";
-// import { ScrollTrigger } from "gsap/ScrollTrigger";
-
-// gsap.registerPlugin(ScrollTrigger);
-
-// const MODEL_URL = "/model/PC.glb";
-
-// type Breakpoint = "mobile" | "tablet" | "desktop";
-
-// function getBreakpoint(width: number): Breakpoint {
-//   if (width < 640) return "mobile";
-//   if (width < 1024) return "tablet";
-//   return "desktop";
-// }
-
-// /**
-//  * Every offset below is a FRACTION of the camera's visible width/height,
-//  * not a raw world-unit number. That's what actually fixes "too small" /
-//  * "flies off screen": raw units like `x: 6` only look right for one
-//  * specific fov/aspect/distance combo, and are wrong (often way outside
-//  * the frustum) on every other screen. Fractions always stay in-frame.
-//  */
-// interface FractionalPose {
-//   xFrac: number; // -1..1, fraction of half the visible width
-//   yFrac: number; // -1..1, fraction of half the visible height
-//   zStep: number; // extra depth, in "camera distances", positive = further away
-//   rotX: number;
-//   rotY: number;
-//   rotZ: number;
-//   scaleFactor: number; // multiplier on the auto-fit base scale
-// }
-
-// interface SectionPose {
-//   trigger: string;
-//   pose: FractionalPose;
-// }
-
-// const IDLE_POSE: FractionalPose = {
-//   xFrac: 0.5, // Top-Right: far right
-//   yFrac: 0, // Top-Right: far up (positive = up)
-//   zStep: 0,
-//   rotX: 3,
-//   rotY: 0, // Starts facing forward
-//   rotZ: 0,
-//   scaleFactor: 1,
-// };
-
-// const SECTIONS: SectionPose[] = [
-//   // Hero: Top-Right (uses IDLE_POSE)
-//   { trigger: "#hero", pose: IDLE_POSE },
-
-//   // Bio: Middle-Left (arrow ↙)
-//   {
-//     trigger: "#bio",
-//     pose: {
-//       xFrac: -0.85,
-//       yFrac: 0.0, // vertically centered
-//       zStep: 0.15,
-//       rotX: 0.1,
-//       rotY: 1.0, // turns to face left
-//       rotZ: 0,
-//       scaleFactor: 0.9,
-//     },
-//   },
-
-//   // Projects: Middle-Right (arrow ↘)
-//   {
-//     trigger: "#projects",
-//     pose: {
-//       xFrac: 0.85,
-//       yFrac: -0.3, // slightly lower than center
-//       zStep: 0.25,
-//       rotX: -0.1,
-//       rotY: 1.8, // turns to face right
-//       rotZ: 0.05,
-//       scaleFactor: 0.8,
-//     },
-//   },
-
-//   // Footer: Bottom-Left (arrow ↙)
-//   {
-//     trigger: "#footer",
-//     pose: {
-//       xFrac: -0.85,
-//       yFrac: -0.85, // very bottom
-//       zStep: 0.2,
-//       rotX: 0.1,
-//       rotY: 3.5, // turns sharply to face left
-//       rotZ: 0,
-//       scaleFactor: 0.85,
-//     },
-//   },
-// ];
-// // Extra scale multiplier per breakpoint so the model doesn't overwhelm
-// // narrow screens where there's much less side-margin to hide it in.
-// const BREAKPOINT_SCALE: Record<Breakpoint, number> = {
-//   mobile: 0.5,
-//   tablet: 0.72,
-//   desktop: 1,
-// };
-
-// const BASE_DISTANCE = 6; // world units the model idles in front of the camera
-
-// /** Visible width/height (world units) of the camera frustum at a given distance. */
-// function getVisibleSizeAtDistance(
-//   camera: THREE.PerspectiveCamera,
-//   distance: number,
-// ): { width: number; height: number } {
-//   const fovRad = (camera.fov * Math.PI) / 180;
-//   const height = 2 * Math.tan(fovRad / 2) * distance;
-//   const width = height * camera.aspect;
-//   return { width, height };
-// }
-
-// function resolvePose(
-//   camera: THREE.PerspectiveCamera,
-//   baseScale: number,
-//   pose: FractionalPose,
-//   breakpoint: Breakpoint = "desktop",
-// ) {
-//   const distance = BASE_DISTANCE + pose.zStep * BASE_DISTANCE;
-//   const { width, height } = getVisibleSizeAtDistance(camera, distance);
-//   // Clamp fractions a touch so the model never clips off the edge of
-//   // narrow viewports, then apply the breakpoint-specific scale-down.
-//   const xFrac = Math.max(-0.92, Math.min(0.92, pose.xFrac));
-//   const yFrac = Math.max(-0.88, Math.min(0.88, pose.yFrac));
-//   return {
-//     x: xFrac * (width / 2),
-//     y: yFrac * (height / 2),
-//     z: -distance,
-//     scale: baseScale * pose.scaleFactor * BREAKPOINT_SCALE[breakpoint],
-//   };
-// }
-
-// interface ModelProps {
-//   groupRef: RefObject<THREE.Group | null>;
-//   onReady: (group: THREE.Group) => void;
-// }
-
-// function Model({ groupRef, onReady }: ModelProps) {
-//   const { scene } = useGLTF(MODEL_URL);
-//   const firedRef = useRef(false);
-
-//   useEffect(() => {
-//     if (!groupRef.current || firedRef.current) return;
-//     firedRef.current = true;
-//     onReady(groupRef.current);
-//   }, [groupRef, onReady]);
-
-//   return (
-//     <group ref={groupRef}>
-//       <primitive object={scene} />
-//     </group>
-//   );
-// }
-
-// useGLTF.preload(MODEL_URL);
-
-// interface SceneProps {
-//   onGroupReady: (group: THREE.Group, camera: THREE.PerspectiveCamera) => void;
-// }
-
-// function Scene({ onGroupReady }: SceneProps) {
-//   const groupRef = useRef<THREE.Group>(null);
-//   const { camera } = useThree();
-
-//   const handleReady = (group: THREE.Group): void => {
-//     onGroupReady(group, camera as THREE.PerspectiveCamera);
-//   };
-
-//   return (
-//     <>
-//       <ambientLight intensity={1.2} />
-//       <directionalLight position={[5, 10, 7]} intensity={3.5} />
-//       <directionalLight position={[-5, -3, -5]} intensity={1} />
-//       <Model groupRef={groupRef} onReady={handleReady} />
-//     </>
-//   );
-// }
-
-// export default function PC() {
-//   const containerRef = useRef<HTMLDivElement>(null);
-//   const [breakpoint, setBreakpoint] = useState<Breakpoint>("desktop");
-
-//   const groupRef = useRef<THREE.Group | null>(null);
-//   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
-//   const gsapCtxRef = useRef<gsap.Context | null>(null);
-//   const baseScaleRef = useRef(1);
-
-//   // Picks the right camera fov per screen tier, purely aesthetic.
-//   useEffect(() => {
-//     setBreakpoint(getBreakpoint(window.innerWidth));
-//     const handleTierChange = () =>
-//       setBreakpoint(getBreakpoint(window.innerWidth));
-//     window.addEventListener("resize", handleTierChange);
-//     window.addEventListener("orientationchange", handleTierChange);
-//     return () => {
-//       window.removeEventListener("resize", handleTierChange);
-//       window.removeEventListener("orientationchange", handleTierChange);
-//     };
-//   }, []);
-
-//   const layout = (
-//     group: THREE.Group,
-//     camera: THREE.PerspectiveCamera,
-//     breakpoint: Breakpoint,
-//   ): void => {
-//     const box = new THREE.Box3().setFromObject(group);
-//     const sphere = box.getBoundingSphere(new THREE.Sphere());
-//     const radius = sphere.radius || 1;
-//     // Target: the model's radius should read as ~22% of the visible frustum
-//     // height at its idle depth, regardless of the model's native scale.
-//     const targetRadius =
-//       getVisibleSizeAtDistance(camera, BASE_DISTANCE).height * 0.22;
-//     baseScaleRef.current = targetRadius / radius;
-
-//     const idle = resolvePose(
-//       camera,
-//       baseScaleRef.current,
-//       IDLE_POSE,
-//       breakpoint,
-//     );
-//     group.position.set(idle.x, idle.y, idle.z);
-//     group.rotation.set(IDLE_POSE.rotX, IDLE_POSE.rotY, IDLE_POSE.rotZ);
-//     group.scale.setScalar(idle.scale);
-
-//     gsapCtxRef.current?.revert();
-//     gsapCtxRef.current = null;
-
-//     const prefersReducedMotion = window.matchMedia(
-//       "(prefers-reduced-motion: reduce)",
-//     ).matches;
-//     if (prefersReducedMotion) return;
-
-//     gsapCtxRef.current = gsap.context(() => {
-//       // IMPORTANT: gsap.to() captures its "from" value at the moment the
-//       // tween is *built*, not when its ScrollTrigger becomes active. Since
-//       // every section's tween used to get built in this same synchronous
-//       // loop (all at mount time), sections after the first were all
-//       // silently starting from the same frozen initial snapshot instead of
-//       // from wherever the previous section had actually animated the model
-//       // to — that's what caused the snap-back/jump when crossing from one
-//       // section into the next.
-//       //
-//       // Fix: use gsap.fromTo() with an explicitly tracked "previous target"
-//       // so every section's start state is *provably* identical to the
-//       // previous section's end state — position, rotation, and scale all
-//       // carry over exactly, with the same ease/scrub feel throughout, so
-//       // the whole page reads as one continuous, cinematic motion instead of
-//       // a chain of separate clips.
-//       let prevTarget = resolvePose(
-//         camera,
-//         baseScaleRef.current,
-//         IDLE_POSE,
-//         breakpoint,
-//       );
-//       let prevRot = {
-//         x: IDLE_POSE.rotX,
-//         y: IDLE_POSE.rotY,
-//         z: IDLE_POSE.rotZ,
-//       };
-
-//       SECTIONS.forEach(({ trigger, pose }) => {
-//         const target = resolvePose(
-//           camera,
-//           baseScaleRef.current,
-//           pose,
-//           breakpoint,
-//         );
-//         const scrollTrigger = {
-//           trigger,
-//           start: "top 85%",
-//           end: "top 15%",
-//           scrub: 0.6,
-//         };
-
-//         gsap.fromTo(
-//           group.position,
-//           { x: prevTarget.x, y: prevTarget.y, z: prevTarget.z },
-//           {
-//             x: target.x,
-//             y: target.y,
-//             z: target.z,
-//             scrollTrigger,
-//             ease: "power1.inOut",
-//           },
-//         );
-//         gsap.fromTo(
-//           group.rotation,
-//           { x: prevRot.x, y: prevRot.y, z: prevRot.z },
-//           {
-//             x: pose.rotX,
-//             y: pose.rotY,
-//             z: pose.rotZ,
-//             scrollTrigger,
-//             ease: "power1.inOut",
-//           },
-//         );
-//         gsap.fromTo(
-//           group.scale,
-//           { x: prevTarget.scale, y: prevTarget.scale, z: prevTarget.scale },
-//           {
-//             x: target.scale,
-//             y: target.scale,
-//             z: target.scale,
-//             scrollTrigger,
-//             ease: "power1.inOut",
-//           },
-//         );
-
-//         prevTarget = target;
-//         prevRot = { x: pose.rotX, y: pose.rotY, z: pose.rotZ };
-//       });
-//     });
-//   };
-
-//   const handleGroupReady = (
-//     group: THREE.Group,
-//     camera: THREE.PerspectiveCamera,
-//   ): void => {
-//     groupRef.current = group;
-//     cameraRef.current = camera;
-//     layout(group, camera, breakpoint);
-//   };
-
-//   // Re-run layout on resize so the model stays correctly sized/positioned
-//   // even when the window changes without crossing a breakpoint.
-//   useEffect(() => {
-//     let resizeTimeout: ReturnType<typeof setTimeout> | undefined;
-//     const handleResize = (): void => {
-//       clearTimeout(resizeTimeout);
-//       resizeTimeout = setTimeout(() => {
-//         const group = groupRef.current;
-//         const camera = cameraRef.current;
-//         if (!group || !camera) return;
-//         const nextBreakpoint = getBreakpoint(window.innerWidth);
-//         // Let react-three-fiber apply the new aspect/fov to the camera first.
-//         requestAnimationFrame(() => layout(group, camera, nextBreakpoint));
-//       }, 150);
-//     };
-//     window.addEventListener("resize", handleResize);
-//     window.addEventListener("orientationchange", handleResize);
-//     return () => {
-//       clearTimeout(resizeTimeout);
-//       window.removeEventListener("resize", handleResize);
-//       window.removeEventListener("orientationchange", handleResize);
-//     };
-//   }, []);
-
-//   // Also re-run layout whenever the breakpoint tier itself changes (e.g.
-//   // rotating a tablet across the tablet/desktop line, or resizing a
-//   // desktop browser window down into the tablet range) so the
-//   // breakpoint-specific scale-down actually takes effect.
-//   useEffect(() => {
-//     const group = groupRef.current;
-//     const camera = cameraRef.current;
-//     if (!group || !camera) return;
-//     layout(group, camera, breakpoint);
-//     // eslint-disable-next-line react-hooks/exhaustive-deps
-//   }, [breakpoint]);
-
-//   useEffect(() => {
-//     return () => {
-//       gsapCtxRef.current?.revert();
-//     };
-//   }, []);
-
-//   const fov = breakpoint === "mobile" ? 55 : breakpoint === "tablet" ? 50 : 45;
-
-//   return (
-//     <div
-//       ref={containerRef}
-//       aria-hidden="true"
-//       style={{
-//         position: "fixed",
-//         inset: 0,
-//         pointerEvents: "none",
-//         // Was z-index: 10, which sat *above* every section's text (since
-//         // fixed elements stack above normal-flow content regardless of DOM
-//         // order). Negative z-index puts it behind all normal in-flow
-//         // content instead, so it now reads as a background companion that
-//         // peeks around your text rather than covering it.
-//         zIndex: 10,
-//       }}
-//     >
-//       <Canvas
-//         gl={{
-//           alpha: true,
-//           antialias: true,
-//           powerPreference: "high-performance",
-//         }}
-//         camera={{ fov, position: [0, 0, 0], near: 0.1, far: 1000 }}
-//         dpr={[1, 2]}
-//         style={{ width: "100%", height: "100%" }}
-//       >
-//         <Scene onGroupReady={handleGroupReady} />
-//       </Canvas>
-//     </div>
-//   );
-// }
-
 "use client";
 
-import { useEffect, useRef, useState, type RefObject } from "react";
-import * as THREE from "three";
-import { Canvas, useThree } from "@react-three/fiber";
-import { useGLTF } from "@react-three/drei";
-import { gsap } from "gsap";
+import React, { useEffect, useRef } from "react";
+import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const MODEL_URL = "/model/PC.glb";
-
-type Breakpoint = "mobile" | "tablet" | "desktop" | "wide";
-
-function getBreakpoint(width: number): Breakpoint {
-  if (width < 640) return "mobile";
-  if (width < 1024) return "tablet";
-  if (width < 1600) return "desktop";
-  return "wide";
+interface LaptopProps {
+  className?: string;
+  brand?: "pc" | "mac";
+  size?: "sm" | "md" | "lg";
 }
 
-/**
- * Every offset below is a FRACTION of the camera's visible width/height,
- * not a raw world-unit number. That's what actually fixes "too small" /
- * "flies off screen": raw units like `x: 6` only look right for one
- * specific fov/aspect/distance combo, and are wrong (often way outside
- * the frustum) on every other screen. Fractions always stay in-frame, and
- * resolvePose() below additionally tightens the clamp further for any pose
- * with scaleFactor > 1 (the "big reveal" moment in Skills) so a bigger
- * model can never poke past the screen edge.
- */
-interface FractionalPose {
-  xFrac: number; // -1..1, fraction of half the visible width
-  yFrac: number; // -1..1, fraction of half the visible height
-  zStep: number; // extra depth, in "camera distances", positive = further away
-  rotX: number;
-  rotY: number;
-  rotZ: number;
-  scaleFactor: number; // multiplier on the auto-fit base scale
-}
+const PC: React.FC<LaptopProps> = ({
+  className = "",
+  brand = "pc",
+  size = "md",
+}) => {
+  const scopeRef = useRef<HTMLDivElement>(null);
 
-interface SectionPose {
-  trigger: string;
-  pose: FractionalPose;
-}
-
-// Hero: small, tucked bottom-right, facing forward.
-const IDLE_POSE: FractionalPose = {
-  xFrac: 0.8,
-  yFrac: 0.68,
-  zStep: 0,
-  rotX: 0,
-  rotY: 0,
-  rotZ: 0,
-  scaleFactor: 0.55,
-};
-
-/**
- * Path traced from the reference screenshot: small in the Hero corner →
- * sweeps to the opposite bottom corner in Bio → tucks bottom-left by the
- * Projects card → a big, prominent reveal on the right side through Skills
- * → small again up near the email line in Footer. rotY keeps climbing
- * (never resets) across every stop so the spin direction never reverses —
- * that's what reads as one continuous turn instead of separate poses.
- */
-const SECTIONS: SectionPose[] = [
-  { trigger: "#hero", pose: IDLE_POSE },
-
-  // Bio: bottom-left, small.
-  {
-    trigger: "#bio",
-    pose: {
-      xFrac: -0.8,
-      yFrac: 0.7,
-      zStep: 0.05,
-      rotX: 0.05,
-      rotY: 0.8,
-      rotZ: 0,
-      scaleFactor: 0.5,
-    },
-  },
-
-  // Projects: bottom-left of the card, small.
-  {
-    trigger: "#projects",
-    pose: {
-      xFrac: -0.72,
-      yFrac: 0.68,
-      zStep: 0.1,
-      rotX: -0.05,
-      rotY: 1.5,
-      rotZ: 0,
-      scaleFactor: 0.55,
-    },
-  },
-
-  // Skills: the big moment — right side, large and prominent.
-  {
-    trigger: "#skills",
-    pose: {
-      xFrac: 0.65,
-      yFrac: 0.12,
-      zStep: -0.05,
-      rotX: 0,
-      rotY: 2.4,
-      rotZ: 0.08,
-      scaleFactor: 1.3,
-    },
-  },
-
-  // Footer: small again, upper-right near the email line.
-  {
-    trigger: "#footer",
-    pose: {
-      xFrac: 0.68,
-      yFrac: -0.35,
-      zStep: 0.05,
-      rotX: 0,
-      rotY: 3.1,
-      rotZ: 0,
-      scaleFactor: 0.5,
-    },
-  },
-];
-
-// Extra scale multiplier per screen tier so the model doesn't overwhelm
-// narrow phones (where there's much less margin to hide it in) and doesn't
-// read as tiny/lost on very large or ultra-wide monitors.
-const BREAKPOINT_SCALE: Record<Breakpoint, number> = {
-  mobile: 0.5,
-  tablet: 0.72,
-  desktop: 1,
-  wide: 1.15,
-};
-
-/**
- * Short viewports (landscape phones, small laptop windows with lots of
- * browser chrome) have plenty of width but very little height. Sizing
- * purely off width tiers can let the model dominate a screen that's only
- * 350-450px tall, so this damps scale down further in that case,
- * independent of the width tier.
- */
-function getShortViewportFactor(): number {
-  if (typeof window === "undefined") return 1;
-  const vh = window.innerHeight;
-  if (vh < 420) return 0.6;
-  if (vh < 600) return 0.8;
-  return 1;
-}
-
-const BASE_DISTANCE = 6; // world units the model idles in front of the camera
-
-/** Visible width/height (world units) of the camera frustum at a given distance. */
-function getVisibleSizeAtDistance(
-  camera: THREE.PerspectiveCamera,
-  distance: number,
-): { width: number; height: number } {
-  const fovRad = (camera.fov * Math.PI) / 180;
-  const height = 2 * Math.tan(fovRad / 2) * distance;
-  const width = height * camera.aspect;
-  return { width, height };
-}
-
-function resolvePose(
-  camera: THREE.PerspectiveCamera,
-  baseScale: number,
-  pose: FractionalPose,
-  breakpoint: Breakpoint = "desktop",
-) {
-  const distance = BASE_DISTANCE + pose.zStep * BASE_DISTANCE;
-  const { width, height } = getVisibleSizeAtDistance(camera, distance);
-  // Clamp fractions so the model never clips off the edge of the
-  // viewport. Any pose that's visually bigger than the base size (the
-  // Skills "reveal" moment, scaleFactor > 1) gets a noticeably tighter
-  // clamp, since a larger object needs more margin to stay fully on
-  // screen at the same position fraction.
-  const isOversized = pose.scaleFactor > 1;
-  const maxX = isOversized ? 0.68 : 0.9;
-  const maxY = isOversized ? 0.62 : 0.85;
-  const xFrac = Math.max(-maxX, Math.min(maxX, pose.xFrac));
-  const yFrac = Math.max(-maxY, Math.min(maxY, pose.yFrac));
-  return {
-    x: xFrac * (width / 2),
-    y: yFrac * (height / 2),
-    z: -distance,
-    scale:
-      baseScale *
-      pose.scaleFactor *
-      BREAKPOINT_SCALE[breakpoint] *
-      getShortViewportFactor(),
-  };
-}
-
-interface ModelProps {
-  groupRef: RefObject<THREE.Group | null>;
-  onReady: (group: THREE.Group) => void;
-}
-
-function Model({ groupRef, onReady }: ModelProps) {
-  const { scene } = useGLTF(MODEL_URL);
-  const firedRef = useRef(false);
-
-  useEffect(() => {
-    if (!groupRef.current || firedRef.current) return;
-    firedRef.current = true;
-    onReady(groupRef.current);
-  }, [groupRef, onReady]);
-
-  return (
-    <group ref={groupRef}>
-      <primitive object={scene} />
-    </group>
-  );
-}
-
-useGLTF.preload(MODEL_URL);
-
-interface SceneProps {
-  onGroupReady: (group: THREE.Group, camera: THREE.PerspectiveCamera) => void;
-}
-
-function Scene({ onGroupReady }: SceneProps) {
-  const groupRef = useRef<THREE.Group>(null);
-  const { camera } = useThree();
-
-  const handleReady = (group: THREE.Group): void => {
-    onGroupReady(group, camera as THREE.PerspectiveCamera);
+  const sizeMap = {
+    sm: { scale: 0.6 },
+    md: { scale: 1 },
+    lg: { scale: 1.4 },
   };
 
-  return (
-    <>
-      <ambientLight intensity={1.2} />
-      <directionalLight position={[5, 10, 7]} intensity={3.5} />
-      <directionalLight position={[-5, -3, -5]} intensity={1} />
-      <Model groupRef={groupRef} onReady={handleReady} />
-    </>
-  );
-}
+  const { scale } = sizeMap[size];
+  const brandText = brand === "pc" ? "Laptop" : "MacBook Air";
 
-export default function PC() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [breakpoint, setBreakpoint] = useState<Breakpoint>("desktop");
-
-  const groupRef = useRef<THREE.Group | null>(null);
-  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
-  const gsapCtxRef = useRef<gsap.Context | null>(null);
-  const baseScaleRef = useRef(1);
-
-  // Picks the right camera fov/scale tier for the current screen.
   useEffect(() => {
-    setBreakpoint(getBreakpoint(window.innerWidth));
-    const handleTierChange = () =>
-      setBreakpoint(getBreakpoint(window.innerWidth));
-    window.addEventListener("resize", handleTierChange);
-    window.addEventListener("orientationchange", handleTierChange);
-    return () => {
-      window.removeEventListener("resize", handleTierChange);
-      window.removeEventListener("orientationchange", handleTierChange);
-    };
-  }, []);
+    const root = scopeRef.current;
+    if (!root) return;
 
-  const layout = (
-    group: THREE.Group,
-    camera: THREE.PerspectiveCamera,
-    breakpoint: Breakpoint,
-  ): void => {
-    const box = new THREE.Box3().setFromObject(group);
-    const sphere = box.getBoundingSphere(new THREE.Sphere());
-    const radius = sphere.radius || 1;
-    // Target: the model's radius should read as ~22% of the visible frustum
-    // height at its idle depth, regardless of the model's native scale.
-    const targetRadius =
-      getVisibleSizeAtDistance(camera, BASE_DISTANCE).height * 0.22;
-    baseScaleRef.current = targetRadius / radius;
+    const model = root.querySelector(".pc-model") as HTMLElement | null;
+    if (!model) return;
 
-    const idle = resolvePose(
-      camera,
-      baseScaleRef.current,
-      IDLE_POSE,
-      breakpoint,
-    );
-    group.position.set(idle.x, idle.y, idle.z);
-    group.rotation.set(IDLE_POSE.rotX, IDLE_POSE.rotY, IDLE_POSE.rotZ);
-    group.scale.setScalar(idle.scale);
+    const getLayout = () => {
+      const rect = model.getBoundingClientRect();
 
-    gsapCtxRef.current?.revert();
-    gsapCtxRef.current = null;
+      // Minimum 24px gap from edges (up to 40px on big screens)
+      const spacing = Math.max(24, Math.min(40, window.innerWidth * 0.03));
 
-    const prefersReducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-    if (prefersReducedMotion) return;
+      // Extra room at the bottom so the soft shadow stays inside too
+      const shadowExtra = rect.height * 0.5;
 
-    gsapCtxRef.current = gsap.context(() => {
-      // Every section's tween starts from gsap.fromTo() with an explicitly
-      // tracked "previous target," so each section's start state is
-      // *provably* identical to the previous section's end state —
-      // position, rotation, and scale all carry over exactly, with the
-      // same ease/scrub feel throughout. That's what makes the whole page
-      // read as one continuous, cinematic motion instead of separate clips
-      // that happen to be near each other.
-      let prevTarget = resolvePose(
-        camera,
-        baseScaleRef.current,
-        IDLE_POSE,
-        breakpoint,
+      const halfW = rect.width / 2;
+      const halfH = rect.height / 2;
+
+      const maxX = Math.max(0, window.innerWidth / 2 - halfW - spacing);
+      const maxYTop = Math.max(0, window.innerHeight / 2 - halfH - spacing);
+      const maxYBottom = Math.max(
+        0,
+        window.innerHeight / 2 - halfH - spacing - shadowExtra,
       );
-      let prevRot = {
-        x: IDLE_POSE.rotX,
-        y: IDLE_POSE.rotY,
-        z: IDLE_POSE.rotZ,
+
+      return {
+        bottomRight: { x: maxX, y: maxYBottom },
+        bottomCenter: { x: 0, y: maxYBottom },
+        bottomLeft: { x: -maxX, y: maxYBottom },
+        rightCenter: { x: maxX, y: 0 },
+        leftCenter: { x: -maxX, y: 0 },
+        topRight: { x: maxX, y: -maxYTop },
+        topLeft: { x: -maxX, y: -maxYTop },
+        center: { x: 0, y: 0 },
+      };
+    };
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const applyStaticPosition = () => {
+        const layout = getLayout();
+        gsap.set(root, layout.bottomRight);
       };
 
-      SECTIONS.forEach(({ trigger, pose }) => {
-        const target = resolvePose(
-          camera,
-          baseScaleRef.current,
-          pose,
-          breakpoint,
-        );
-        const scrollTrigger = {
-          trigger,
-          start: "top 85%",
-          end: "top 15%",
-          scrub: 0.6,
-        };
+      applyStaticPosition();
 
-        gsap.fromTo(
-          group.position,
-          { x: prevTarget.x, y: prevTarget.y, z: prevTarget.z },
-          {
-            x: target.x,
-            y: target.y,
-            z: target.z,
-            scrollTrigger,
-            ease: "power1.inOut",
-          },
-        );
-        gsap.fromTo(
-          group.rotation,
-          { x: prevRot.x, y: prevRot.y, z: prevRot.z },
-          {
-            x: pose.rotX,
-            y: pose.rotY,
-            z: pose.rotZ,
-            scrollTrigger,
-            ease: "power1.inOut",
-          },
-        );
-        gsap.fromTo(
-          group.scale,
-          { x: prevTarget.scale, y: prevTarget.scale, z: prevTarget.scale },
-          {
-            x: target.scale,
-            y: target.scale,
-            z: target.scale,
-            scrollTrigger,
-            ease: "power1.inOut",
-          },
-        );
+      let resizeTimer: ReturnType<typeof setTimeout> | null = null;
 
-        prevTarget = target;
-        prevRot = { x: pose.rotX, y: pose.rotY, z: pose.rotZ };
-      });
+      const onResize = () => {
+        if (resizeTimer) clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => applyStaticPosition(), 200);
+      };
+
+      window.addEventListener("resize", onResize);
+      window.addEventListener("orientationchange", onResize);
+
+      return () => {
+        if (resizeTimer) clearTimeout(resizeTimer);
+        window.removeEventListener("resize", onResize);
+        window.removeEventListener("orientationchange", onResize);
+      };
+    }
+
+    const inner: any = root.querySelectorAll(".inner");
+    const screen: any = root.querySelectorAll(".screen");
+    const shadow: any = root.querySelectorAll(".shadow");
+    const shade: any = root.querySelectorAll(".shade");
+    const bodyFace: any = root.querySelectorAll(".macbody .face-one");
+    const macbody: any = root.querySelectorAll(".macbody");
+
+    gsap.set(macbody, { rotateX: -90 });
+    gsap.set(inner, { rotateX: -20, rotateY: 0, rotateZ: 0 });
+    gsap.set(screen, { rotateX: 0, backgroundPosition: "0% 100%" });
+    gsap.set(shadow, {
+      rotateX: 80,
+      rotateY: 0,
+      rotateZ: 0,
+      x: 0,
+      boxShadow: "0 0 60px 40px rgba(0,0,0,0.3)",
     });
-  };
+    gsap.set(shade, { backgroundPosition: "-20px 0px" });
+    gsap.set(bodyFace, { backgroundColor: "#dfdfdf" });
 
-  const handleGroupReady = (
-    group: THREE.Group,
-    camera: THREE.PerspectiveCamera,
-  ): void => {
-    groupRef.current = group;
-    cameraRef.current = camera;
-    layout(group, camera, breakpoint);
-  };
-
-  // Re-run layout on resize so the model stays correctly sized/positioned
-  // even when the window changes without crossing a breakpoint.
-  useEffect(() => {
-    let resizeTimeout: ReturnType<typeof setTimeout> | undefined;
-    const handleResize = (): void => {
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(() => {
-        const group = groupRef.current;
-        const camera = cameraRef.current;
-        if (!group || !camera) return;
-        const nextBreakpoint = getBreakpoint(window.innerWidth);
-        // Let react-three-fiber apply the new aspect/fov to the camera first.
-        requestAnimationFrame(() => layout(group, camera, nextBreakpoint));
-      }, 150);
+    type Pose = {
+      inner: Record<string, any>;
+      screen: Record<string, any>;
+      shadow: Record<string, any>;
+      shade: Record<string, any>;
+      bodyFace: Record<string, any>;
     };
-    window.addEventListener("resize", handleResize);
-    window.addEventListener("orientationchange", handleResize);
+
+    const poses: Pose[] = [
+      {
+        inner: { rotateX: -20, rotateY: 0, rotateZ: 0 },
+        screen: { rotateX: 0, backgroundPosition: "0% 100%" },
+        shadow: {
+          rotateX: 80,
+          rotateY: 0,
+          rotateZ: 0,
+          x: 0,
+          boxShadow: "0 0 60px 40px rgba(0,0,0,0.3)",
+        },
+        shade: { backgroundPosition: "-20px 0px" },
+        bodyFace: { backgroundColor: "#dfdfdf" },
+      },
+      {
+        inner: { rotateX: -20, rotateY: 35, rotateZ: 0 },
+        screen: { rotateX: 45, backgroundPosition: "0% 100%" },
+        shadow: {
+          rotateX: 80,
+          rotateY: 10,
+          rotateZ: 0,
+          x: 0,
+          boxShadow: "0 0 60px 40px rgba(0,0,0,0.3)",
+        },
+        shade: { backgroundPosition: "-40px 0px" },
+        bodyFace: { backgroundColor: "#d8d8d8" },
+      },
+      {
+        inner: { rotateX: 18, rotateY: 150, rotateZ: 0 },
+        screen: { rotateX: -85, backgroundPosition: "50% 0%" },
+        shadow: {
+          rotateX: 45,
+          rotateY: -20,
+          rotateZ: -15,
+          x: 0,
+          boxShadow: "0 0 50px 30px rgba(0,0,0,0.3)",
+        },
+        shade: { backgroundPosition: "200px 0px" },
+        bodyFace: { backgroundColor: "#bbbbbb" },
+      },
+      {
+        inner: { rotateX: -45, rotateY: 245, rotateZ: 0 },
+        screen: { rotateX: 12, backgroundPosition: "100% 0%" },
+        shadow: {
+          rotateX: 80,
+          rotateY: -10,
+          rotateZ: 35,
+          x: 24,
+          boxShadow: "0 0 35px 15px rgba(0,0,0,0.1)",
+        },
+        shade: { backgroundPosition: "-200px 0px" },
+        bodyFace: { backgroundColor: "#cfcfcf" },
+      },
+      {
+        inner: { rotateX: -20, rotateY: 325, rotateZ: 0 },
+        screen: { rotateX: 0, backgroundPosition: "100% 0%" },
+        shadow: {
+          rotateX: 80,
+          rotateY: 0,
+          rotateZ: 0,
+          x: 0,
+          boxShadow: "0 0 60px 40px rgba(0,0,0,0.3)",
+        },
+        shade: { backgroundPosition: "0px 0px" },
+        bodyFace: { backgroundColor: "#dfdfdf" },
+      },
+      {
+        inner: { rotateX: -20, rotateY: 360, rotateZ: 0 },
+        screen: { rotateX: 0, backgroundPosition: "100% 50%" },
+        shadow: {
+          rotateX: 80,
+          rotateY: 0,
+          rotateZ: 0,
+          x: 0,
+          boxShadow: "0 0 60px 40px rgba(0,0,0,0.3)",
+        },
+        shade: { backgroundPosition: "-20px 0px" },
+        bodyFace: { backgroundColor: "#dfdfdf" },
+      },
+    ];
+
+    // Position of the laptop at the start of each section
+    // hero -> bio -> projects -> skills -> footer -> footer end
+    const positionKeys = [
+      "bottomLeft",
+      "rightCenter",
+      "bottomCenter",
+      "bottomRight",
+      "leftCenter",
+      "bottomRight",
+    ] as const;
+
+    let tl: gsap.core.Timeline | null = null;
+    let st: ReturnType<typeof ScrollTrigger.create> | null = null;
+    let hasInitialized = false;
+
+    const build = () => {
+      tl?.kill();
+      st?.kill();
+
+      const layout = getLayout();
+      const positions = positionKeys.map((key) => layout[key]);
+
+      if (!hasInitialized) {
+        const initialPosition = positions[0];
+        if (initialPosition) {
+          gsap.set(root, initialPosition);
+        }
+        hasInitialized = true;
+      }
+
+      const timeline = gsap.timeline({
+        defaults: { ease: "none" },
+      });
+
+      const maxScroll = ScrollTrigger.maxScroll(window);
+
+      const SECTION_IDS = [
+        "hero",
+        "bio",
+        "projects",
+        "skills",
+        "footer",
+      ] as const;
+
+      const activationOffset = 0;
+
+      const progress = SECTION_IDS.map((id) => {
+        const el = document.getElementById(id);
+        if (!el || maxScroll <= 0) return 0;
+
+        const top =
+          el.getBoundingClientRect().top + window.scrollY - activationOffset;
+
+        return gsap.utils.clamp(0, 1, top / maxScroll);
+      });
+
+      for (let i = 1; i < progress.length; i++) {
+        progress[i] = Math.max(progress[i], progress[i - 1]);
+      }
+
+      const addSegment = (
+        start: number,
+        duration: number,
+        fromIndex: number,
+        toIndex: number,
+      ) => {
+        const fromPose = poses[fromIndex];
+        const toPose = poses[toIndex];
+
+        const fromPosition = positions[fromIndex];
+        const toPosition = positions[toIndex];
+
+        if (!fromPose || !toPose) return;
+        if (!fromPosition || !toPosition) return;
+        if (duration <= 0.0001) return;
+
+        // Move the whole fixed laptop around the screen
+        timeline.fromTo(
+          root as any,
+          fromPosition,
+          {
+            ...toPosition,
+            duration,
+            immediateRender: false,
+          },
+          start,
+        );
+
+        timeline.fromTo(
+          inner,
+          fromPose.inner,
+          {
+            ...toPose.inner,
+            duration,
+            immediateRender: false,
+          },
+          start,
+        );
+
+        timeline.fromTo(
+          screen,
+          fromPose.screen,
+          {
+            ...toPose.screen,
+            duration,
+            immediateRender: false,
+          },
+          start,
+        );
+
+        timeline.fromTo(
+          shadow,
+          fromPose.shadow,
+          {
+            ...toPose.shadow,
+            duration,
+            immediateRender: false,
+          },
+          start,
+        );
+
+        timeline.fromTo(
+          shade,
+          fromPose.shade,
+          {
+            ...toPose.shade,
+            duration,
+            immediateRender: false,
+          },
+          start,
+        );
+
+        timeline.fromTo(
+          bodyFace,
+          fromPose.bodyFace,
+          {
+            ...toPose.bodyFace,
+            duration,
+            immediateRender: false,
+          },
+          start,
+        );
+      };
+
+      SECTION_IDS.forEach((_, i) => {
+        const start = progress[i];
+        const end = i === SECTION_IDS.length - 1 ? 1 : (progress[i + 1] ?? 1);
+
+        addSegment(start, Math.max(0, end - start), i, i + 1);
+      });
+
+      const dummy: Record<string, unknown> = {};
+      timeline.to(dummy, { done: true, duration: 0.001 }, 0.999);
+
+      tl = timeline;
+
+      st = ScrollTrigger.create({
+        trigger: document.body,
+        start: "top top",
+        end: "bottom bottom",
+        animation: timeline,
+        scrub: 0.6,
+        invalidateOnRefresh: true,
+      });
+    };
+
+    build();
+    ScrollTrigger.refresh();
+
+    let resizeTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const onResize = () => {
+      if (resizeTimer) clearTimeout(resizeTimer);
+
+      resizeTimer = setTimeout(() => {
+        build();
+        ScrollTrigger.refresh();
+      }, 200);
+    };
+
+    window.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onResize);
+
     return () => {
-      clearTimeout(resizeTimeout);
-      window.removeEventListener("resize", handleResize);
-      window.removeEventListener("orientationchange", handleResize);
+      if (resizeTimer) clearTimeout(resizeTimer);
+
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", onResize);
+
+      st?.kill();
+      tl?.kill();
     };
-  }, []);
-
-  // Also re-run layout whenever the breakpoint tier itself changes (e.g.
-  // rotating a tablet across the tablet/desktop line, or resizing a
-  // desktop browser window down into a smaller tier) so the
-  // breakpoint-specific scale-down actually takes effect.
-  useEffect(() => {
-    const group = groupRef.current;
-    const camera = cameraRef.current;
-    if (!group || !camera) return;
-    layout(group, camera, breakpoint);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [breakpoint]);
-
-  useEffect(() => {
-    return () => {
-      gsapCtxRef.current?.revert();
-    };
-  }, []);
-
-  const fov =
-    breakpoint === "mobile"
-      ? 55
-      : breakpoint === "tablet"
-        ? 50
-        : breakpoint === "desktop"
-          ? 45
-          : 40;
+  }, [size]);
 
   return (
     <div
-      ref={containerRef}
+      ref={scopeRef}
+      className={`pc-fixed-wrap ${className}`.trim()}
       aria-hidden="true"
-      style={{
-        position: "fixed",
-        inset: 0,
-        pointerEvents: "none",
-        // Fixed elements stack above normal-flow content regardless of DOM
-        // order, so a positive z-index here would sit ON TOP of every
-        // section's text. Negative z-index puts it behind all normal
-        // in-flow content instead, so it reads as a background companion
-        // peeking around your text rather than covering it.
-        zIndex: 100,
-      }}
     >
-      <Canvas
-        gl={{
-          alpha: true,
-          antialias: true,
-          powerPreference: "high-performance",
-        }}
-        camera={{ fov, position: [0, 0, 0], near: 0.1, far: 1000 }}
-        dpr={[1, 2]}
-        style={{ width: "100%", height: "100%" }}
-      >
-        <Scene onGroupReady={handleGroupReady} />
-      </Canvas>
+      <style>{`
+        .pc-fixed-wrap {
+          position: fixed;
+          inset: 0;
+          z-index: 50;
+          pointer-events: none;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          will-change: transform;
+        }
+
+        .pc-stage {
+          transform-origin: center;
+          transform: scale(0.62);
+        }
+
+        @media (min-width: 640px) {
+          .pc-stage {
+            transform: scale(0.75);
+          }
+        }
+
+        @media (min-width: 1024px) {
+          .pc-stage {
+            transform: scale(0.9);
+          }
+        }
+
+        @media (min-width: 1440px) {
+          .pc-stage {
+            transform: scale(1);
+          }
+        }
+
+        @media (min-width: 1920px) {
+          .pc-stage {
+            transform: scale(1.12);
+          }
+        }
+
+        .pc-model {
+          position: relative;
+          width: 150px;
+          height: 96px;
+          perspective: 500px;
+          transform-origin: center;
+        }
+
+        .shadow {
+          position: absolute;
+          width: 60px;
+          height: 0px;
+          left: 40px;
+          top: 160px;
+          transform: rotateX(80deg) rotateY(0deg) rotateZ(0deg);
+          box-shadow: 0 0 60px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .inner {
+          z-index: 20;
+          position: absolute;
+          width: 150px;
+          height: 96px;
+          left: 0;
+          top: 0;
+          transform-style: preserve-3d;
+          transform: rotateX(-20deg) rotateY(0deg) rotateZ(0deg);
+        }
+
+        .screen {
+          width: 150px;
+          height: 96px;
+          position: absolute;
+          left: 0;
+          bottom: 0;
+          border-radius: 7px;
+          background: #ddd;
+          transform-style: preserve-3d;
+          transform-origin: 50% 93px;
+          transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+          background-image: linear-gradient(
+            45deg,
+            rgba(0, 0, 0, 0.34) 0%,
+            rgba(0, 0, 0, 0) 100%
+          );
+          background-position: left bottom;
+          background-size: 300px 300px;
+          box-shadow: inset 0 3px 7px rgba(255, 255, 255, 0.5);
+        }
+
+        .screen .face-one {
+          width: 150px;
+          height: 96px;
+          position: absolute;
+          left: 0;
+          bottom: 0;
+          border-radius: 7px;
+          background: #d3d3d3;
+          transform: translateZ(2px);
+          background-image: linear-gradient(
+            45deg,
+            rgba(0, 0, 0, 0.24) 0%,
+            rgba(0, 0, 0, 0) 100%
+          );
+        }
+
+        .screen .face-one .camera {
+          width: 3px;
+          height: 3px;
+          border-radius: 100%;
+          background: #000;
+          position: absolute;
+          left: 50%;
+          top: 4px;
+          margin-left: -1.5px;
+        }
+
+        .screen .face-one .display {
+          width: 130px;
+          height: 74px;
+          margin: 10px;
+          background-color: #000;
+          background-size: 100% 100%;
+          border-radius: 1px;
+          position: relative;
+          box-shadow: inset 0 0 2px rgba(0, 0, 0, 1);
+        }
+
+        .screen .face-one .display .shade {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 130px;
+          height: 74px;
+          background: linear-gradient(
+            -135deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.1) 47%,
+            rgba(255, 255, 255, 0) 48%
+          );
+          background-size: 300px 200px;
+          background-position: -20px 0px;
+        }
+
+        .screen .face-one span {
+          position: absolute;
+          top: 85px;
+          left: 50%;
+          transform: translateX(-50%);
+          font-size: 6px;
+          color: #666;
+          font-weight: 500;
+          letter-spacing: 0.5px;
+          text-transform: uppercase;
+        }
+
+        .macbody {
+          width: 150px;
+          height: 96px;
+          position: absolute;
+          left: 0;
+          bottom: 0;
+          border-radius: 7px;
+          background: #cbcbcb;
+          transform-style: preserve-3d;
+          transform-origin: 50% bottom;
+          transform: rotateX(-90deg);
+          background-image: linear-gradient(
+            45deg,
+            rgba(0, 0, 0, 0.24) 0%,
+            rgba(0, 0, 0, 0) 100%
+          );
+        }
+
+        .macbody .face-one {
+          width: 150px;
+          height: 96px;
+          position: absolute;
+          left: 0;
+          bottom: 0;
+          border-radius: 7px;
+          transform-style: preserve-3d;
+          background: #dfdfdf;
+          transform: translateZ(-2px);
+          background-image: linear-gradient(
+            30deg,
+            rgba(0, 0, 0, 0.24) 0%,
+            rgba(0, 0, 0, 0) 100%
+          );
+        }
+
+        .macbody .touchpad {
+          width: 40px;
+          height: 31px;
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          border-radius: 4px;
+          margin: -44px 0 0 -18px;
+          background: #cdcdcd;
+          background-image: linear-gradient(
+            30deg,
+            rgba(0, 0, 0, 0.24) 0%,
+            rgba(0, 0, 0, 0) 100%
+          );
+          box-shadow: inset 0 0 3px #888;
+        }
+
+        .macbody .keyboard {
+          width: 130px;
+          height: 45px;
+          position: absolute;
+          left: 7px;
+          top: 41px;
+          border-radius: 4px;
+          transform-style: preserve-3d;
+          background: #cdcdcd;
+          background-image: linear-gradient(
+            30deg,
+            rgba(0, 0, 0, 0.24) 0%,
+            rgba(0, 0, 0, 0) 100%
+          );
+          box-shadow: inset 0 0 3px #777;
+          padding: 0 0 0 2px;
+        }
+
+        .keyboard .key {
+          width: 6px;
+          height: 6px;
+          background: #444;
+          float: left;
+          margin: 1px;
+          transform: translateZ(-2px);
+          border-radius: 2px;
+          box-shadow: 0 -2px 0 #222;
+        }
+
+        .key.space {
+          width: 45px;
+        }
+
+        .key.f {
+          height: 3px;
+        }
+
+        .macbody .pad {
+          width: 5px;
+          height: 5px;
+          background: #333;
+          border-radius: 100%;
+          position: absolute;
+        }
+
+        .pad.one {
+          left: 20px;
+          top: 20px;
+        }
+
+        .pad.two {
+          right: 20px;
+          top: 20px;
+        }
+
+        .pad.three {
+          right: 20px;
+          bottom: 20px;
+        }
+
+        .pad.four {
+          left: 20px;
+          bottom: 20px;
+        }
+      `}</style>
+
+      <div className="pc-stage">
+        <div className="pc-model" style={{ transform: `scale(${scale})` }}>
+          <div className="shadow"></div>
+
+          <div className="inner">
+            {/* Screen */}
+            <div className="screen">
+              <div className="face-one">
+                <div className="camera"></div>
+
+                <div className="display">
+                  <div className="shade"></div>
+                </div>
+
+                <span>{brandText}</span>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="macbody">
+              <div className="face-one">
+                <div className="touchpad"></div>
+
+                <div className="keyboard">
+                  {Array.from({ length: 67 }).map((_, i) => {
+                    const isSpace = i === 5;
+                    const isF = i >= 58 && i <= 73;
+
+                    const keyClass = [
+                      "key",
+                      isSpace ? "space" : "",
+                      isF ? "f" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ");
+
+                    return <div key={i} className={keyClass}></div>;
+                  })}
+                </div>
+              </div>
+
+              <div className="pad one"></div>
+              <div className="pad two"></div>
+              <div className="pad three"></div>
+              <div className="pad four"></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
-}
+};
+
+export default PC;
