@@ -96,7 +96,7 @@ export default function NavBar() {
       <motion.div
         initial={{ y: -50 }}
         animate={{ y: 0 }}
-        transition={{ duration: 1 }}
+        transition={{ duration: 0.5 }}
         className="flex gap-2 bg-linear-to-bl from-white to-white/50 dark:from-black dark:to-black/50 shadow-md rounded-3xl backdrop-blur-sm pr-3"
       >
         <Link href="/">
