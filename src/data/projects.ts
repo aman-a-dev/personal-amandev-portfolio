@@ -165,24 +165,64 @@ export const projectsList: ProjectsType[] = [
     ],
     isPrivate: false,
   },
-{
+  {
+    badge: "",
+    img: "re",
+    title: "Docnah Real Estate",
+    subTitle: "Luxury Real Estate Platform",
+    description:
+      "A modern and luxurious real estate platform designed to showcase properties with an immersive and premium experience. It features interactive maps, property listings, detailed property pages, advanced search and filtering, smooth animations, responsive design, and an elegant user interface that helps users discover and explore properties effortlessly.",
+
+    github: "https://github.com/aman-a-dev/realestate4",
+    demo: "https://realestate-4-et.vercel.app",
+    teckStack: [
+      "Next.js",
+      "TypeScript",
+      "Tailwind CSS",
+      "shadcn/ui",
+      "Framer Motion",
+    ],
+    isPrivate: false,
+  },
+  {
     badge: "New",
-      img: "lg",
-        title: "Leul GFX",
-          subTitle: "Portfolio Website for Thumbnail Designer",
-            description:
-                "A modern portfolio website built for a professional thumbnail designer to showcase creative work, attract potential clients, and present services through a visually engaging and responsive experience.",
-                  github: "https://github.com/aman-a-dev/thumbnails-portfolio",
-                    demo: "https://leulgfx.vercel.app/",
-                      teckStack: [
-                          "Next.js",
-                              "TypeScript",
-                                  "Tailwind CSS",
-                                      "shadcn/ui",
-                                          "Framer Motion",
-                                            ],
-                                              isPrivate: false,
-                                              },
+    img: "s",
+    title: "Online Shop",
+    subTitle: "Full-Stack E-Commerce Platform",
+    description:
+      "A modern full-stack e-commerce platform built for seamless online shopping and store management. It includes a powerful admin panel for managing products, categories, orders, and store content, along with a responsive product listing and shopping experience. The platform also integrates Telegram for customer communication and order management, providing a convenient connection between the store and its customers.",
+    github: "https://github.com/aman-a-dev/shop",
+    demo: "https://shop-et.vercel.app",
+    teckStack: [
+      "Next.js",
+      "TypeScript",
+      "Tailwind CSS",
+      "Prisma",
+      "PostgreSQL",
+      "Neon",
+      "shadcn/ui",
+      "Telegram Bot API",
+    ],
+    isPrivate: true,
+  },
+  {
+    badge: "New",
+    img: "lg",
+    title: "Leul GFX",
+    subTitle: "Portfolio Website for Thumbnail Designer",
+    description:
+      "A modern portfolio website built for a professional thumbnail designer to showcase creative work, attract potential clients, and present services through a visually engaging and responsive experience.",
+    github: "https://github.com/aman-a-dev/thumbnails-portfolio",
+    demo: "https://leulgfx.vercel.app/",
+    teckStack: [
+      "Next.js",
+      "TypeScript",
+      "Tailwind CSS",
+      "shadcn/ui",
+      "Framer Motion",
+    ],
+    isPrivate: false,
+  },
 
   {
     badge: "",
