@@ -37,15 +37,15 @@ export default function RootLayout({
 }
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://amanadev.vercel.app/"),
+  metadataBase: new URL("https://aman.is-a-fullstack.dev"),
 
   title: {
-    default: "Aman | Full Stack Web Developer",
-    template: "%s | Aman",
+    default: "Amanuel | Full Stack Web Developer",
+    template: "%s | Amanuel Anteneh",
   },
 
   description:
-    "I'm Aman, a Full Stack Web Developer specializing in Next.js, React, TypeScript, Node.js, Prisma ORM, PostgreSQL, Tailwind CSS, and AI-powered web applications. Explore my portfolio, projects, skills, and experience.",
+    "I'm Amanuel Anteneh (Aman) a Full Stack Web Developer specializing in Next.js, React, TypeScript, Node.js, Prisma ORM, PostgreSQL, Tailwind CSS, and AI-powered web applications. Explore my portfolio, projects, skills, and experience.",
 
   keywords: [
     // Personal Branding
@@ -54,8 +54,11 @@ export const metadata: Metadata = {
     "Aman portfolio",
     "Amanuel portfolio",
     "Aman developer",
+    "Amanuel developer",
     "Aman full stack developer",
+    "Amanuel full stack developer",
     "Aman web developer",
+    "Amanuel web developer",
 
     // Primary Keywords
     "Full Stack Developer",
@@ -150,13 +153,38 @@ export const metadata: Metadata = {
 
   authors: [
     {
-      name: "Aman",
-      url: "https://amanadev.vercel.app/",
+      name: "Amanuel Anteneh",
+      url: "https://aman.is-a-fullstack.dev",
     },
   ],
 
-  creator: "Amanuel Antene",
-  publisher: "Amanuel Antene",
+  openGraph: {
+  type: 'website',
+  locale: 'en_US',
+  url: 'https://aman.is-a-fullstack.dev',
+  siteName: 'Amanuel Anteneh Portfolio',
+  title: 'Amanuel | Full Stack Web Developer',
+  description: 'Full Stack Web Developer specializing in Next.js, React, TypeScript, Node.js, Prisma ORM, PostgreSQL, Tailwind CSS, and AI-powered web applications.',
+  images: [
+    {
+      url: '/opengraph-image', // resolved via metadataBase
+      width: 1200,
+      height: 630,
+      alt: 'Amanuel Anteneh – Full Stack Web Developer',
+    },
+  ],
+},
+
+twitter: {
+  card: 'summary_large_image',
+  title: 'Amanuel | Full Stack Web Developer',
+  description: 'Full Stack Web Developer specializing in Next.js, React, TypeScript, Node.js, and AI-powered web applications.',
+  images: ['/opengraph-image'],
+  creator: '@Aman_a_Dev', // add if applicable
+},
+  
+  creator: "Amanuel Anteneh",
+  publisher: "Amanuel Anteneh",
 
   applicationName: "Amanuel Anteneh Portfolio",
 
@@ -174,7 +202,7 @@ export const metadata: Metadata = {
   },
 
   alternates: {
-    canonical: "https://amanadev.vercel.app/",
+    canonical: "https://aman.is-a-fullstack.dev",
   },
 
   icons: {
@@ -208,7 +236,7 @@ export const metadata: Metadata = {
 
   other: {
     // PWA
-    "application-name": "Aman Portfolio",
+    "application-name": "Amanuel Anteneh Portfolio",
     "mobile-web-app-capable": "yes",
     "apple-mobile-web-app-capable": "yes",
     "apple-mobile-web-app-status-bar-style": "black-translucent",
@@ -227,7 +255,7 @@ export const metadata: Metadata = {
     "og:updated_time": new Date().toISOString(),
 
     // Rich Metadata
-    "article:author": "Aman",
+    "article:author": "Amanuel Anteneh",
     "article:section": "Software Engineering",
     "article:tag":
       "Next.js, React, TypeScript, Node.js, Prisma, PostgreSQL, Tailwind CSS, AI, Full Stack",
